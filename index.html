@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Expansion Draft Simulator - Summer 2026</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 3px solid #e94560;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #e94560, #0f3460);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p { color: #888; font-size: 1.1rem; }
+
+        /* Team Selection */
+        .team-selection {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 60px 20px;
+        }
+        .team-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 300px;
+        }
+        .team-card:hover {
+            transform: translateY(-10px);
+            border-color: #e94560;
+            box-shadow: 0 20px 40px rgba(233, 69, 96, 0.2);
+        }
+        .team-logo { font-size: 80px; margin-bottom: 20px; }
+        .team-card h2 { font-size: 1.8rem; margin-bottom: 10px; }
+        .team-card p { color: #888; }
+
+        /* NBA Draft Screen */
+        .nba-draft { display: none; padding: 40px 20px; }
+        .nba-draft.active { display: block; }
+        .draft-pick-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        .prospects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .prospect-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .prospect-card:hover {
+            border-color: #ffd700;
+            transform: translateY(-3px);
+        }
+        .prospect-card.unavailable {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .prospect-rank {
+            display: inline-block;
+            background: rgba(255,215,0,0.2);
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .prospect-card h3 { font-size: 1.1rem; margin-bottom: 5px; }
+        .prospect-card .school { color: #888; font-size: 0.9rem; margin-bottom: 8px; }
+        .prospect-card .details { font-size: 0.85rem; color: #aaa; }
+        .select-prospect-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #ffd700;
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Draft Board */
+        .draft-board { display: none; }
+        .draft-board.active { display: block; }
+        .draft-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .team-info { display: flex; align-items: center; gap: 15px; }
+        .team-info .logo { font-size: 40px; }
+        .team-info h2 { font-size: 1.5rem; }
+        .cap-info { text-align: right; }
+        .cap-bar {
+            width: 300px;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: visible;
+            margin-top: 8px;
+            position: relative;
+        }
+        .cap-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            transition: width 0.3s ease;
+        }
+        .cap-fill.floor-met { background: linear-gradient(90deg, #00ff88, #00cc6a); }
+        .floor-marker {
+            position: absolute;
+            left: 90%;
+            top: -3px;
+            height: 26px;
+            width: 2px;
+            background: #fff;
+        }
+        .roster-count {
+            background: rgba(233, 69, 96, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .roster-count.complete { background: rgba(0, 255, 136, 0.2); }
+        .tax-alert {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .tax-alert.warning { background: rgba(255, 193, 7, 0.2); border: 1px solid #ffc107; color: #ffc107; }
+        .tax-alert.danger { background: rgba(255, 87, 34, 0.2); border: 1px solid #ff5722; color: #ff5722; }
+        .tax-alert.severe { background: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; color: #f44336; }
+
+        .draft-area { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
+        @media (max-width: 1000px) { .draft-area { grid-template-columns: 1fr; } }
+
+        .available-players, .your-roster {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-bar input, .filter-bar select {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+        }
+        .filter-bar input { flex: 1; min-width: 200px; }
+        .filter-bar input::placeholder { color: #888; }
+        .filter-bar select { cursor: pointer; }
+        .filter-bar select option { background: #1a1a2e; }
+
+        .players-grid { display: grid; gap: 10px; max-height: 600px; overflow-y: auto; }
+        .player-card {
+            display: grid;
+            grid-template-columns: 50px 1fr 80px 60px 90px 70px;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .player-card:hover { background: rgba(255,255,255,0.1); transform: translateX(5px); }
+        .player-card.drafted { opacity: 0.3; pointer-events: none; }
+        .player-card.team-drafted { opacity: 0.5; pointer-events: none; border-left: 3px solid #ff4444; }
+        .player-pos {
+            padding: 6px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .pos-PG { background: rgba(65, 105, 225, 0.4); }
+        .pos-SG { background: rgba(50, 205, 50, 0.4); }
+        .pos-SF { background: rgba(255, 165, 0, 0.4); }
+        .pos-PF { background: rgba(220, 20, 60, 0.4); }
+        .pos-C { background: rgba(138, 43, 226, 0.4); }
+        .player-info h4 { font-size: 0.95rem; margin-bottom: 2px; }
+        .player-info p { color: #888; font-size: 0.8rem; }
+        .player-stats { font-size: 0.8rem; color: #aaa; }
+        .player-contract { text-align: center; }
+        .player-contract .years { font-weight: bold; color: #00ccff; }
+        .player-salary { font-weight: bold; color: #00ff88; font-size: 0.85rem; }
+        .player-salary.high { color: #ffcc00; }
+        .draft-btn {
+            padding: 6px 12px;
+            background: #e94560;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .draft-btn:hover { background: #ff6b8a; }
+        .draft-btn:disabled { background: #444; cursor: not-allowed; }
+
+        .your-roster h3 { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .roster-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
+        .roster-player {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        .roster-player.rookie { border-left: 3px solid #ffd700; }
+        .roster-player .pos { padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 8px; }
+        .roster-player .name { flex: 1; }
+        .roster-player .years { color: #00ccff; font-size: 0.8rem; margin-right: 10px; }
+        .roster-player .salary { color: #00ff88; font-weight: bold; }
+        .remove-btn { background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.1rem; padding: 3px; }
+
+        .roster-summary { margin-top: 20px; padding-top: 15px; border-top: 2px solid rgba(255,255,255,0.1); }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
+        .summary-row.total { font-size: 1.1rem; font-weight: bold; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        .finalize-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(90deg, #00ff88, #00cc6a);
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .finalize-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+        .rules-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .rules-panel h3 { margin-bottom: 15px; color: #e94560; }
+        .rules-panel h4 { margin-top: 15px; color: #ffc107; }
+        .rules-panel ul { list-style: none; }
+        .rules-panel li { padding: 6px 0; padding-left: 20px; position: relative; color: #aaa; font-size: 0.9rem; }
+        .rules-panel li::before { content: "•"; position: absolute; left: 0; color: #e94560; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: flex-start; align-items: flex-start; z-index: 1000; overflow-y: auto; padding: 40px 20px; }
+        .modal.active { display: flex; }
+        .modal-content { margin: auto; }
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            border: 2px solid #e94560;
+        }
+        .modal-content h2 { font-size: 2rem; margin-bottom: 10px; text-align: center; }
+        .rotation-section {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .rotation-section h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        .rotation-section.starters h3 { color: #00ff88; border-color: rgba(0,255,136,0.3); }
+        .rotation-section.rotation h3 { color: #00ccff; border-color: rgba(0,204,255,0.3); }
+        .rotation-section.bench h3 { color: #888; border-color: rgba(136,136,136,0.3); }
+        .rotation-player {
+            display: grid;
+            grid-template-columns: 45px 1fr 70px 80px;
+            gap: 10px;
+            padding: 8px 5px;
+            align-items: center;
+            border-radius: 6px;
+        }
+        .rotation-player:nth-child(even) { background: rgba(255,255,255,0.03); }
+        .rotation-player .pos-badge {
+            padding: 4px 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .rotation-player .name { font-size: 0.95rem; }
+        .rotation-player .name .rookie-star { color: #ffd700; }
+        .rotation-player .stats { font-size: 0.8rem; color: #aaa; }
+        .rotation-player .salary { font-size: 0.85rem; color: #00ff88; text-align: right; }
+        .restart-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #e94560;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>NBA Expansion Draft Simulator</h1>
+        <p>Summer 2026 - Build Seattle or Las Vegas from the ground up</p>
+    </header>
+
+    <!-- Team Selection -->
+    <div class="team-selection" id="teamSelection">
+        <div class="team-card" onclick="selectTeam('seattle')">
+            <div class="team-logo">🌲</div>
+            <h2>Seattle Supersonics</h2>
+            <p>Return of the Sonics</p>
+            <p style="margin-top: 10px; color: #00704A;">Climate Pledge Arena</p>
+        </div>
+        <div class="team-card" onclick="selectTeam('vegas')">
+            <div class="team-logo">🎰</div>
+            <h2>Las Vegas Kings</h2>
+            <p>Sin City's NBA Team</p>
+            <p style="margin-top: 10px; color: #B4975A;">T-Mobile Arena</p>
+        </div>
+    </div>
+
+    <!-- NBA Draft Phase -->
+    <div class="nba-draft" id="nbaDraft">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 20px;">2026 NBA Draft</h2>
+            <div style="text-align: center;">
+                <div class="draft-pick-badge">Your Pick: #<span id="draftPickNum">5</span> Overall</div>
+                <p style="color: #888; margin-bottom: 30px;">Select your franchise cornerstone from the available prospects</p>
+            </div>
+            <div class="prospects-grid" id="prospectsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Expansion Draft Board -->
+    <div class="draft-board" id="draftBoard">
+        <div class="container">
+            <div class="draft-header">
+                <div class="team-info">
+                    <span class="logo" id="selectedTeamLogo">🌲</span>
+                    <div>
+                        <h2 id="selectedTeamName">Seattle Supersonics</h2>
+                        <p style="color: #888;">Expansion Draft - Summer 2026</p>
+                    </div>
+                </div>
+                <div class="cap-info">
+                    <div>Floor: <strong>$149.4M</strong> | Cap: <strong>$166M</strong> | Tax: <strong>$200M</strong></div>
+                    <div>Committed: <strong id="capUsed">$0</strong> | <span id="floorStatus" style="color: #ff6b6b;">Need $149.4M</span></div>
+                    <div class="cap-bar">
+                        <div class="cap-fill" id="capBar" style="width: 0%"></div>
+                        <div class="floor-marker"></div>
+                    </div>
+                    <div id="taxAlert" class="tax-alert" style="display: none;"></div>
+                </div>
+                <div class="roster-count" id="rosterCount">Roster: 1 / 15</div>
+            </div>
+
+            <div class="draft-area">
+                <div class="available-players">
+                    <h3 style="margin-bottom: 15px;">Exposed Players (Researched for Summer 2026)</h3>
+                    <div class="filter-bar">
+                        <input type="text" id="searchInput" placeholder="Search players...">
+                        <select id="posFilter">
+                            <option value="">All Positions</option>
+                            <option value="PG">PG</option>
+                            <option value="SG">SG</option>
+                            <option value="SF">SF</option>
+                            <option value="PF">PF</option>
+                            <option value="C">C</option>
+                        </select>
+                        <select id="teamFilter"><option value="">All Teams</option></select>
+                        <select id="sortBy">
+                            <option value="salary-desc">Salary (High-Low)</option>
+                            <option value="ppg-desc">PPG (High-Low)</option>
+                            <option value="age-asc">Age (Young-Old)</option>
+                        </select>
+                    </div>
+                    <div class="players-grid" id="playersGrid"></div>
+                </div>
+
+                <div class="your-roster">
+                    <h3>Your Roster</h3>
+                    <div class="roster-list" id="rosterList"></div>
+                    <div class="roster-summary">
+                        <div class="summary-row"><span>Players:</span><span id="summaryPlayers">1 / 15</span></div>
+                        <div class="summary-row"><span>Avg Contract:</span><span id="summaryAvgYears">-</span></div>
+                        <div class="summary-row total"><span>Year 1 Salary:</span><span id="summaryTotal">$0</span></div>
+                        <div class="summary-row" style="font-size: 0.85rem; color: #888;"><span>Total Committed:</span><span id="summaryCommitted">$0</span></div>
+                    </div>
+                    <button class="finalize-btn" id="finalizeBtn" disabled onclick="finalizeDraft()">Draft 14 More Players</button>
+                </div>
+            </div>
+
+            <div class="rules-panel">
+                <h3>Expansion Draft Rules (Summer 2026)</h3>
+                <ul>
+                    <li>Each team protects 8 players under contract - only exposed players available</li>
+                    <li>Draft ONE player per existing team (30 teams = max 30 picks)</li>
+                    <li>Must draft 14 players (+ your NBA Draft pick = 15 total)</li>
+                    <li><strong>You CAN exceed the $166M cap</strong> - expansion teams exempt</li>
+                    <li>Must meet 90% salary floor ($149.4M minimum)</li>
+                    <li>Inherit FULL remaining contract length</li>
+                </ul>
+                <h4>Tax Thresholds (2026-27)</h4>
+                <ul>
+                    <li><strong>Luxury Tax:</strong> $200M</li>
+                    <li><strong>First Apron:</strong> $209M - No full MLE</li>
+                    <li><strong>Second Apron:</strong> $222M - Severe restrictions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div class="modal" id="completionModal">
+        <div class="modal-content">
+            <h2>🏆 Roster Complete!</h2>
+            <p id="modalTeamName" style="text-align: center; color: #888; margin-bottom: 20px;"></p>
+            <div id="rotationDisplay"></div>
+            <div id="modalSummary"></div>
+            <button class="restart-btn" onclick="restartDraft()">Draft Again</button>
+        </div>
+    </div>
+
+    <script>
+        // 2026 NBA Draft Prospects (based on consensus mocks)
+        const DRAFT_PROSPECTS = [
+            {rank: 1, name: "Darryn Peterson", pos: "G", school: "Kansas", salary: 12_500_000, years: 4, ppg: 18.5, potential: "All-Star"},
+            {rank: 2, name: "AJ Dybantsa", pos: "F", school: "BYU", salary: 11_800_000, years: 4, ppg: 17.2, potential: "All-Star"},
+            {rank: 3, name: "Cameron Boozer", pos: "F", school: "Duke", salary: 11_200_000, years: 4, ppg: 16.8, potential: "All-Star"},
+            {rank: 4, name: "Caleb Wilson", pos: "F", school: "North Carolina", salary: 10_500_000, years: 4, ppg: 15.5, potential: "Starter"},
+            {rank: 5, name: "Kingston Flemings", pos: "G", school: "Houston", salary: 9_800_000, years: 4, ppg: 14.8, potential: "Starter"},
+            {rank: 6, name: "Jayden Quaintance", pos: "C", school: "Kentucky", salary: 9_200_000, years: 4, ppg: 14.2, potential: "Starter"},
+            {rank: 7, name: "Mikel Brown Jr.", pos: "G", school: "Louisville", salary: 8_500_000, years: 4, ppg: 13.5, potential: "Starter"},
+            {rank: 8, name: "Darius Acuff Jr.", pos: "G", school: "Arkansas", salary: 8_000_000, years: 4, ppg: 13.0, potential: "Starter"},
+            {rank: 9, name: "Keaton Wagler", pos: "G", school: "Illinois", salary: 7_500_000, years: 4, ppg: 12.5, potential: "Rotation"},
+            {rank: 10, name: "Yaxel Lendeborg", pos: "F", school: "Michigan", salary: 7_000_000, years: 4, ppg: 12.0, potential: "Rotation"},
+            {rank: 11, name: "Koa Peat", pos: "F", school: "Arizona", salary: 6_500_000, years: 4, ppg: 11.5, potential: "Rotation"},
+            {rank: 12, name: "Braylon Mullins", pos: "G", school: "UConn", salary: 6_000_000, years: 4, ppg: 11.0, potential: "Rotation"},
+            {rank: 13, name: "Amari Allen", pos: "F", school: "Alabama", salary: 5_500_000, years: 4, ppg: 10.5, potential: "Rotation"},
+            {rank: 14, name: "Hannes Steinbach", pos: "F", school: "Washington", salary: 5_000_000, years: 4, ppg: 10.0, potential: "Rotation"},
+            {rank: 15, name: "Labaron Philon", pos: "G", school: "Alabama", salary: 4_800_000, years: 4, ppg: 9.8, potential: "Rotation"},
+            {rank: 16, name: "Cameron Carr", pos: "G", school: "Baylor", salary: 4_500_000, years: 4, ppg: 9.5, potential: "Rotation"},
+            {rank: 17, name: "Aday Mara", pos: "C", school: "Michigan", salary: 4_200_000, years: 4, ppg: 9.2, potential: "Rotation"},
+            {rank: 18, name: "Bennett Stirtz", pos: "G", school: "Iowa", salary: 4_000_000, years: 4, ppg: 9.0, potential: "Bench"},
+            {rank: 19, name: "Thomas Haugh", pos: "F", school: "Florida", salary: 3_800_000, years: 4, ppg: 8.8, potential: "Bench"},
+            {rank: 20, name: "Karim Lopez", pos: "F", school: "NZ Breakers", salary: 3_600_000, years: 4, ppg: 8.5, potential: "Bench"},
+            {rank: 21, name: "Morez Johnson Jr.", pos: "C", school: "Michigan", salary: 3_400_000, years: 4, ppg: 8.2, potential: "Bench"},
+            {rank: 22, name: "Nate Ament", pos: "F", school: "Tennessee", salary: 3_200_000, years: 4, ppg: 8.0, potential: "Bench"},
+            {rank: 23, name: "Patrick Ngongba II", pos: "C", school: "Duke", salary: 3_000_000, years: 4, ppg: 7.8, potential: "Bench"},
+            {rank: 24, name: "Tounde Yessoufou", pos: "G", school: "Baylor", salary: 2_800_000, years: 4, ppg: 7.5, potential: "Bench"},
+            {rank: 25, name: "Chris Cenac Jr.", pos: "C", school: "Houston", salary: 2_600_000, years: 4, ppg: 7.2, potential: "Bench"},
+            {rank: 26, name: "Brayden Burries", pos: "G", school: "Arizona", salary: 2_400_000, years: 4, ppg: 7.0, potential: "Bench"},
+            {rank: 27, name: "Christian Anderson", pos: "G", school: "Texas Tech", salary: 2_200_000, years: 4, ppg: 6.8, potential: "Project"},
+            {rank: 28, name: "Henri Veesaar", pos: "C", school: "North Carolina", salary: 2_000_000, years: 4, ppg: 6.5, potential: "Project"},
+            {rank: 29, name: "Isaiah Evans", pos: "F", school: "Duke", salary: 1_900_000, years: 4, ppg: 6.2, potential: "Project"},
+            {rank: 30, name: "Neoklis Avdalas", pos: "G", school: "Virginia Tech", salary: 1_800_000, years: 4, ppg: 6.0, potential: "Project"},
+        ];
+
+        // Exposed players (researched for Summer 2026)
+        const PLAYERS = [
+            {name: "Clint Capela", team: "Atlanta Hawks", position: "C", age: 32, salary: 22000000, yearsLeft: 1, isRFA: false, ppg: 10.5, rpg: 9.8, apg: 1.2},
+            {name: "Larry Nance Jr.", team: "Atlanta Hawks", position: "PF", age: 33, salary: 11000000, yearsLeft: 1, isRFA: false, ppg: 7.2, rpg: 5.5, apg: 1.8},
+            {name: "David Roddy", team: "Atlanta Hawks", position: "SF", age: 25, salary: 3200000, yearsLeft: 1, isRFA: true, ppg: 6.5, rpg: 3.5, apg: 1.2},
+            {name: "Vit Krejci", team: "Atlanta Hawks", position: "SG", age: 25, salary: 2800000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 2.5, apg: 2.2},
+            {name: "Luke Kornet", team: "Boston Celtics", position: "C", age: 31, salary: 6200000, yearsLeft: 1, isRFA: false, ppg: 5.8, rpg: 3.8, apg: 1.0},
+            {name: "Jordan Walsh", team: "Boston Celtics", position: "SF", age: 23, salary: 2200000, yearsLeft: 2, isRFA: true, ppg: 4.5, rpg: 2.5, apg: 0.8},
+            {name: "JD Davison", team: "Boston Celtics", position: "PG", age: 24, salary: 2000000, yearsLeft: 1, isRFA: true, ppg: 5.2, rpg: 1.8, apg: 3.2},
+            {name: "Baylor Scheierman", team: "Boston Celtics", position: "SF", age: 26, salary: 2800000, yearsLeft: 2, isRFA: true, ppg: 6.5, rpg: 3.5, apg: 2.0},
+            {name: "Dennis Schroder", team: "Brooklyn Nets", position: "PG", age: 33, salary: 13000000, yearsLeft: 1, isRFA: false, ppg: 14.8, rpg: 2.8, apg: 6.5},
+            {name: "Dorian Finney-Smith", team: "Brooklyn Nets", position: "SF", age: 33, salary: 15000000, yearsLeft: 1, isRFA: false, ppg: 8.5, rpg: 4.5, apg: 1.5},
+            {name: "Jalen Wilson", team: "Brooklyn Nets", position: "SF", age: 25, salary: 2500000, yearsLeft: 1, isRFA: true, ppg: 7.2, rpg: 4.0, apg: 1.5},
+            {name: "Dariq Whitehead", team: "Brooklyn Nets", position: "SG", age: 23, salary: 4200000, yearsLeft: 2, isRFA: true, ppg: 6.8, rpg: 2.5, apg: 1.8},
+            {name: "Grant Williams", team: "Charlotte Hornets", position: "PF", age: 28, salary: 12800000, yearsLeft: 1, isRFA: false, ppg: 9.5, rpg: 4.8, apg: 1.8},
+            {name: "Vasilije Micic", team: "Charlotte Hornets", position: "PG", age: 32, salary: 8500000, yearsLeft: 1, isRFA: false, ppg: 9.2, rpg: 2.5, apg: 4.8},
+            {name: "Cody Martin", team: "Charlotte Hornets", position: "SF", age: 31, salary: 8100000, yearsLeft: 1, isRFA: false, ppg: 6.8, rpg: 4.0, apg: 2.5},
+            {name: "Moussa Diabate", team: "Charlotte Hornets", position: "PF", age: 24, salary: 2500000, yearsLeft: 1, isRFA: true, ppg: 5.5, rpg: 5.2, apg: 0.6},
+            {name: "Nikola Vucevic", team: "Chicago Bulls", position: "C", age: 36, salary: 22000000, yearsLeft: 1, isRFA: false, ppg: 17.5, rpg: 10.5, apg: 3.5},
+            {name: "Lonzo Ball", team: "Chicago Bulls", position: "PG", age: 29, salary: 21400000, yearsLeft: 1, isRFA: false, ppg: 10.0, rpg: 4.5, apg: 5.5},
+            {name: "Chris Duarte", team: "Chicago Bulls", position: "SG", age: 29, salary: 4800000, yearsLeft: 1, isRFA: false, ppg: 7.5, rpg: 2.5, apg: 1.8},
+            {name: "Jalen Smith", team: "Chicago Bulls", position: "PF", age: 26, salary: 7200000, yearsLeft: 1, isRFA: false, ppg: 9.0, rpg: 6.2, apg: 1.0},
+            {name: "Dean Wade", team: "Cleveland Cavaliers", position: "PF", age: 29, salary: 7500000, yearsLeft: 1, isRFA: false, ppg: 7.2, rpg: 4.0, apg: 1.5},
+            {name: "Georges Niang", team: "Cleveland Cavaliers", position: "PF", age: 33, salary: 4500000, yearsLeft: 1, isRFA: false, ppg: 6.0, rpg: 2.5, apg: 1.0},
+            {name: "Ty Jerome", team: "Cleveland Cavaliers", position: "PG", age: 29, salary: 3200000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 1.8, apg: 3.0},
+            {name: "Jaylon Tyson", team: "Cleveland Cavaliers", position: "SG", age: 23, salary: 2500000, yearsLeft: 2, isRFA: true, ppg: 6.2, rpg: 2.8, apg: 1.8},
+            {name: "Maxi Kleber", team: "Dallas Mavericks", position: "PF", age: 34, salary: 11000000, yearsLeft: 1, isRFA: false, ppg: 6.5, rpg: 4.8, apg: 1.5},
+            {name: "Dwight Powell", team: "Dallas Mavericks", position: "C", age: 35, salary: 4000000, yearsLeft: 1, isRFA: false, ppg: 4.5, rpg: 3.5, apg: 1.0},
+            {name: "Jaden Hardy", team: "Dallas Mavericks", position: "SG", age: 24, salary: 4200000, yearsLeft: 2, isRFA: true, ppg: 9.5, rpg: 2.2, apg: 2.0},
+            {name: "Spencer Dinwiddie", team: "Dallas Mavericks", position: "PG", age: 33, salary: 5500000, yearsLeft: 1, isRFA: false, ppg: 11.0, rpg: 2.8, apg: 4.5},
+            {name: "Zeke Nnaji", team: "Denver Nuggets", position: "PF", age: 25, salary: 4800000, yearsLeft: 1, isRFA: false, ppg: 6.0, rpg: 4.0, apg: 0.8},
+            {name: "Hunter Tyson", team: "Denver Nuggets", position: "SF", age: 26, salary: 2200000, yearsLeft: 1, isRFA: true, ppg: 5.2, rpg: 3.0, apg: 1.0},
+            {name: "DaRon Holmes II", team: "Denver Nuggets", position: "PF", age: 24, salary: 4000000, yearsLeft: 2, isRFA: true, ppg: 9.5, rpg: 5.2, apg: 1.5},
+            {name: "Trey Alexander", team: "Denver Nuggets", position: "PG", age: 23, salary: 2200000, yearsLeft: 2, isRFA: true, ppg: 6.5, rpg: 2.0, apg: 3.5},
+            {name: "Isaiah Stewart", team: "Detroit Pistons", position: "C", age: 25, salary: 6200000, yearsLeft: 1, isRFA: false, ppg: 9.5, rpg: 7.5, apg: 1.5},
+            {name: "Simone Fontecchio", team: "Detroit Pistons", position: "SF", age: 30, salary: 4800000, yearsLeft: 1, isRFA: false, ppg: 8.8, rpg: 3.8, apg: 1.5},
+            {name: "Paul Reed", team: "Detroit Pistons", position: "PF", age: 27, salary: 3500000, yearsLeft: 1, isRFA: false, ppg: 6.8, rpg: 6.0, apg: 1.2},
+            {name: "Bobi Klintman", team: "Detroit Pistons", position: "SF", age: 23, salary: 2200000, yearsLeft: 2, isRFA: true, ppg: 4.5, rpg: 2.8, apg: 0.8},
+            {name: "Kevon Looney", team: "Golden State Warriors", position: "C", age: 30, salary: 8000000, yearsLeft: 1, isRFA: false, ppg: 6.2, rpg: 7.8, apg: 2.8},
+            {name: "Kyle Anderson", team: "Golden State Warriors", position: "SF", age: 33, salary: 9000000, yearsLeft: 1, isRFA: false, ppg: 7.0, rpg: 4.5, apg: 3.8},
+            {name: "De'Anthony Melton", team: "Golden State Warriors", position: "SG", age: 28, salary: 8500000, yearsLeft: 1, isRFA: false, ppg: 10.0, rpg: 3.5, apg: 3.0},
+            {name: "Gui Santos", team: "Golden State Warriors", position: "SF", age: 24, salary: 2200000, yearsLeft: 1, isRFA: true, ppg: 4.0, rpg: 2.0, apg: 0.8},
+            {name: "Steven Adams", team: "Houston Rockets", position: "C", age: 33, salary: 12600000, yearsLeft: 1, isRFA: false, ppg: 7.0, rpg: 9.5, apg: 1.5},
+            {name: "Jeff Green", team: "Houston Rockets", position: "PF", age: 40, salary: 3800000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 3.0, apg: 1.0},
+            {name: "Cam Whitmore", team: "Houston Rockets", position: "SF", age: 22, salary: 4500000, yearsLeft: 2, isRFA: true, ppg: 8.2, rpg: 3.2, apg: 1.0},
+            {name: "Jock Landale", team: "Houston Rockets", position: "C", age: 30, salary: 4200000, yearsLeft: 1, isRFA: false, ppg: 6.2, rpg: 4.8, apg: 1.5},
+            {name: "Goga Bitadze", team: "Indiana Pacers", position: "C", age: 27, salary: 5500000, yearsLeft: 1, isRFA: false, ppg: 8.8, rpg: 6.5, apg: 1.2},
+            {name: "Isaiah Jackson", team: "Indiana Pacers", position: "C", age: 25, salary: 5500000, yearsLeft: 1, isRFA: false, ppg: 7.5, rpg: 5.2, apg: 1.0},
+            {name: "Jarace Walker", team: "Indiana Pacers", position: "PF", age: 22, salary: 5000000, yearsLeft: 2, isRFA: true, ppg: 6.5, rpg: 3.8, apg: 1.5},
+            {name: "Ben Sheppard", team: "Indiana Pacers", position: "SG", age: 24, salary: 2500000, yearsLeft: 2, isRFA: true, ppg: 6.0, rpg: 2.2, apg: 1.8},
+            {name: "P.J. Tucker", team: "LA Clippers", position: "PF", age: 41, salary: 11500000, yearsLeft: 1, isRFA: false, ppg: 3.5, rpg: 3.8, apg: 1.2},
+            {name: "Bones Hyland", team: "LA Clippers", position: "PG", age: 26, salary: 4500000, yearsLeft: 1, isRFA: false, ppg: 10.5, rpg: 2.5, apg: 4.0},
+            {name: "Amir Coffey", team: "LA Clippers", position: "SF", age: 29, salary: 3800000, yearsLeft: 1, isRFA: false, ppg: 7.0, rpg: 2.8, apg: 1.5},
+            {name: "Kobe Brown", team: "LA Clippers", position: "PF", age: 25, salary: 2200000, yearsLeft: 1, isRFA: true, ppg: 5.5, rpg: 3.5, apg: 1.0},
+            {name: "Gabe Vincent", team: "Los Angeles Lakers", position: "PG", age: 30, salary: 11000000, yearsLeft: 1, isRFA: false, ppg: 9.0, rpg: 2.5, apg: 3.5},
+            {name: "Jaxson Hayes", team: "Los Angeles Lakers", position: "C", age: 26, salary: 6200000, yearsLeft: 1, isRFA: false, ppg: 7.2, rpg: 5.0, apg: 1.0},
+            {name: "Bronny James", team: "Los Angeles Lakers", position: "SG", age: 22, salary: 2500000, yearsLeft: 2, isRFA: true, ppg: 4.5, rpg: 1.8, apg: 2.0},
+            {name: "Cam Reddish", team: "Los Angeles Lakers", position: "SF", age: 27, salary: 4500000, yearsLeft: 1, isRFA: false, ppg: 8.0, rpg: 3.0, apg: 1.5},
+            {name: "Luke Kennard", team: "Memphis Grizzlies", position: "SG", age: 30, salary: 7200000, yearsLeft: 1, isRFA: false, ppg: 9.0, rpg: 2.5, apg: 2.8},
+            {name: "John Konchar", team: "Memphis Grizzlies", position: "SF", age: 30, salary: 4800000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 4.8, apg: 2.0},
+            {name: "Jake LaRavia", team: "Memphis Grizzlies", position: "SF", age: 24, salary: 3500000, yearsLeft: 1, isRFA: true, ppg: 6.5, rpg: 3.5, apg: 1.8},
+            {name: "Scotty Pippen Jr.", team: "Memphis Grizzlies", position: "PG", age: 26, salary: 3000000, yearsLeft: 1, isRFA: true, ppg: 9.0, rpg: 2.5, apg: 5.0},
+            {name: "Kevin Love", team: "Miami Heat", position: "PF", age: 38, salary: 4500000, yearsLeft: 1, isRFA: false, ppg: 8.5, rpg: 6.8, apg: 2.5},
+            {name: "Thomas Bryant", team: "Miami Heat", position: "C", age: 29, salary: 3200000, yearsLeft: 1, isRFA: false, ppg: 7.0, rpg: 5.2, apg: 1.0},
+            {name: "Haywood Highsmith", team: "Miami Heat", position: "SF", age: 29, salary: 2800000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 3.5, apg: 1.2},
+            {name: "Pelle Larsson", team: "Miami Heat", position: "SG", age: 25, salary: 2000000, yearsLeft: 1, isRFA: true, ppg: 4.5, rpg: 1.8, apg: 1.5},
+            {name: "Pat Connaughton", team: "Milwaukee Bucks", position: "SG", age: 33, salary: 9400000, yearsLeft: 1, isRFA: false, ppg: 7.0, rpg: 3.5, apg: 1.8},
+            {name: "Andre Jackson Jr.", team: "Milwaukee Bucks", position: "SF", age: 24, salary: 2800000, yearsLeft: 1, isRFA: true, ppg: 5.0, rpg: 3.0, apg: 1.5},
+            {name: "Ryan Rollins", team: "Milwaukee Bucks", position: "SG", age: 24, salary: 2500000, yearsLeft: 1, isRFA: true, ppg: 5.5, rpg: 1.8, apg: 2.5},
+            {name: "Tyler Smith", team: "Milwaukee Bucks", position: "PF", age: 22, salary: 3200000, yearsLeft: 2, isRFA: true, ppg: 6.0, rpg: 3.5, apg: 1.0},
+            {name: "Donte DiVincenzo", team: "Minnesota Timberwolves", position: "SG", age: 29, salary: 12000000, yearsLeft: 1, isRFA: false, ppg: 12.5, rpg: 3.8, apg: 3.5},
+            {name: "Joe Ingles", team: "Minnesota Timberwolves", position: "SF", age: 39, salary: 3500000, yearsLeft: 1, isRFA: false, ppg: 5.0, rpg: 2.5, apg: 3.0},
+            {name: "Leonard Miller", team: "Minnesota Timberwolves", position: "SF", age: 22, salary: 2500000, yearsLeft: 1, isRFA: true, ppg: 5.0, rpg: 4.0, apg: 1.0},
+            {name: "Josh Minott", team: "Minnesota Timberwolves", position: "SF", age: 23, salary: 2800000, yearsLeft: 1, isRFA: true, ppg: 6.0, rpg: 3.2, apg: 1.2},
+            {name: "Jonas Valanciunas", team: "New Orleans Pelicans", position: "C", age: 34, salary: 12500000, yearsLeft: 1, isRFA: false, ppg: 12.5, rpg: 9.8, apg: 2.2},
+            {name: "Javonte Green", team: "New Orleans Pelicans", position: "SF", age: 32, salary: 3500000, yearsLeft: 1, isRFA: false, ppg: 5.0, rpg: 3.0, apg: 1.0},
+            {name: "Daniel Theis", team: "New Orleans Pelicans", position: "C", age: 34, salary: 3200000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 4.5, apg: 1.2},
+            {name: "Jeremiah Robinson-Earl", team: "New Orleans Pelicans", position: "PF", age: 26, salary: 2500000, yearsLeft: 1, isRFA: false, ppg: 5.0, rpg: 4.0, apg: 0.8},
+            {name: "Cameron Payne", team: "New York Knicks", position: "PG", age: 32, salary: 5500000, yearsLeft: 1, isRFA: false, ppg: 7.5, rpg: 2.0, apg: 3.8},
+            {name: "Precious Achiuwa", team: "New York Knicks", position: "PF", age: 27, salary: 6000000, yearsLeft: 1, isRFA: false, ppg: 8.0, rpg: 6.5, apg: 1.5},
+            {name: "Tyler Kolek", team: "New York Knicks", position: "PG", age: 25, salary: 2500000, yearsLeft: 2, isRFA: true, ppg: 5.5, rpg: 1.8, apg: 4.5},
+            {name: "Pachal Chukwu", team: "New York Knicks", position: "C", age: 27, salary: 2000000, yearsLeft: 1, isRFA: false, ppg: 3.0, rpg: 4.0, apg: 0.5},
+            {name: "Kenrich Williams", team: "Oklahoma City Thunder", position: "SF", age: 31, salary: 5000000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 4.0, apg: 2.0},
+            {name: "Aaron Wiggins", team: "Oklahoma City Thunder", position: "SG", age: 27, salary: 3500000, yearsLeft: 1, isRFA: false, ppg: 7.5, rpg: 3.0, apg: 1.5},
+            {name: "Isaiah Joe", team: "Oklahoma City Thunder", position: "SG", age: 27, salary: 4200000, yearsLeft: 1, isRFA: false, ppg: 8.0, rpg: 2.0, apg: 1.0},
+            {name: "Nikola Topic", team: "Oklahoma City Thunder", position: "PG", age: 20, salary: 5500000, yearsLeft: 3, isRFA: true, ppg: 7.0, rpg: 2.5, apg: 5.0},
+            {name: "Gary Harris", team: "Orlando Magic", position: "SG", age: 31, salary: 6500000, yearsLeft: 1, isRFA: false, ppg: 7.5, rpg: 2.5, apg: 1.8},
+            {name: "Jett Howard", team: "Orlando Magic", position: "SG", age: 22, salary: 4000000, yearsLeft: 2, isRFA: true, ppg: 6.5, rpg: 2.5, apg: 1.5},
+            {name: "Caleb Houstan", team: "Orlando Magic", position: "SF", age: 23, salary: 2500000, yearsLeft: 1, isRFA: true, ppg: 5.0, rpg: 2.0, apg: 1.0},
+            {name: "Mac McClung", team: "Orlando Magic", position: "PG", age: 27, salary: 3000000, yearsLeft: 1, isRFA: false, ppg: 9.0, rpg: 2.5, apg: 4.0},
+            {name: "Eric Gordon", team: "Philadelphia 76ers", position: "SG", age: 37, salary: 4200000, yearsLeft: 1, isRFA: false, ppg: 9.0, rpg: 2.0, apg: 1.8},
+            {name: "KJ Martin", team: "Philadelphia 76ers", position: "SF", age: 26, salary: 5500000, yearsLeft: 1, isRFA: false, ppg: 7.5, rpg: 3.8, apg: 1.5},
+            {name: "Adem Bona", team: "Philadelphia 76ers", position: "C", age: 23, salary: 2800000, yearsLeft: 2, isRFA: true, ppg: 5.0, rpg: 4.2, apg: 0.6},
+            {name: "Reggie Jackson", team: "Philadelphia 76ers", position: "PG", age: 36, salary: 2800000, yearsLeft: 1, isRFA: false, ppg: 6.0, rpg: 1.8, apg: 3.0},
+            {name: "Mason Plumlee", team: "Phoenix Suns", position: "C", age: 36, salary: 5200000, yearsLeft: 1, isRFA: false, ppg: 5.8, rpg: 6.0, apg: 2.5},
+            {name: "Collin Gillespie", team: "Phoenix Suns", position: "PG", age: 28, salary: 2500000, yearsLeft: 1, isRFA: false, ppg: 4.5, rpg: 1.5, apg: 2.5},
+            {name: "Damion Lee", team: "Phoenix Suns", position: "SG", age: 33, salary: 2500000, yearsLeft: 1, isRFA: false, ppg: 6.0, rpg: 2.5, apg: 1.5},
+            {name: "Bol Bol", team: "Phoenix Suns", position: "C", age: 26, salary: 2200000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 4.2, apg: 1.0},
+            {name: "Robert Williams III", team: "Portland Trail Blazers", position: "C", age: 29, salary: 12800000, yearsLeft: 1, isRFA: false, ppg: 9.0, rpg: 8.5, apg: 2.0},
+            {name: "Matisse Thybulle", team: "Portland Trail Blazers", position: "SF", age: 29, salary: 6200000, yearsLeft: 1, isRFA: false, ppg: 4.5, rpg: 2.0, apg: 1.0},
+            {name: "Kris Murray", team: "Portland Trail Blazers", position: "PF", age: 25, salary: 3000000, yearsLeft: 1, isRFA: true, ppg: 7.5, rpg: 4.5, apg: 1.5},
+            {name: "Dalano Banton", team: "Portland Trail Blazers", position: "SF", age: 27, salary: 2800000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 2.8, apg: 2.5},
+            {name: "Keon Ellis", team: "Sacramento Kings", position: "SG", age: 26, salary: 2500000, yearsLeft: 1, isRFA: true, ppg: 7.0, rpg: 3.0, apg: 1.8},
+            {name: "Alex Len", team: "Sacramento Kings", position: "C", age: 33, salary: 3500000, yearsLeft: 1, isRFA: false, ppg: 5.0, rpg: 4.5, apg: 1.0},
+            {name: "Devin Carter", team: "Sacramento Kings", position: "SG", age: 24, salary: 5000000, yearsLeft: 2, isRFA: true, ppg: 8.0, rpg: 3.0, apg: 2.5},
+            {name: "Jordan McLaughlin", team: "Sacramento Kings", position: "PG", age: 29, salary: 2800000, yearsLeft: 1, isRFA: false, ppg: 4.5, rpg: 1.8, apg: 3.8},
+            {name: "Chris Paul", team: "San Antonio Spurs", position: "PG", age: 41, salary: 11000000, yearsLeft: 1, isRFA: false, ppg: 10.5, rpg: 3.8, apg: 9.0},
+            {name: "Harrison Barnes", team: "San Antonio Spurs", position: "SF", age: 34, salary: 18000000, yearsLeft: 1, isRFA: false, ppg: 13.0, rpg: 4.5, apg: 2.0},
+            {name: "Sandro Mamukelashvili", team: "San Antonio Spurs", position: "PF", age: 27, salary: 2500000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 3.5, apg: 1.8},
+            {name: "Malaki Branham", team: "San Antonio Spurs", position: "SG", age: 23, salary: 4500000, yearsLeft: 1, isRFA: true, ppg: 8.0, rpg: 2.5, apg: 2.2},
+            {name: "Kelly Olynyk", team: "Toronto Raptors", position: "C", age: 35, salary: 13200000, yearsLeft: 1, isRFA: false, ppg: 9.5, rpg: 5.8, apg: 3.5},
+            {name: "Bruce Brown", team: "Toronto Raptors", position: "SF", age: 29, salary: 6500000, yearsLeft: 1, isRFA: false, ppg: 10.0, rpg: 4.5, apg: 4.0},
+            {name: "Garrett Temple", team: "Toronto Raptors", position: "SG", age: 40, salary: 2200000, yearsLeft: 1, isRFA: false, ppg: 3.5, rpg: 1.5, apg: 1.2},
+            {name: "Ulrich Chomche", team: "Toronto Raptors", position: "C", age: 19, salary: 4000000, yearsLeft: 3, isRFA: true, ppg: 4.5, rpg: 5.0, apg: 0.8},
+            {name: "Patty Mills", team: "Utah Jazz", position: "PG", age: 38, salary: 3500000, yearsLeft: 1, isRFA: false, ppg: 5.5, rpg: 1.5, apg: 2.8},
+            {name: "Svi Mykhailiuk", team: "Utah Jazz", position: "SG", age: 29, salary: 2800000, yearsLeft: 1, isRFA: false, ppg: 6.0, rpg: 1.8, apg: 1.5},
+            {name: "Isaiah Collier", team: "Utah Jazz", position: "PG", age: 21, salary: 5500000, yearsLeft: 3, isRFA: true, ppg: 8.0, rpg: 2.5, apg: 5.0},
+            {name: "Kyle Filipowski", team: "Utah Jazz", position: "C", age: 22, salary: 2800000, yearsLeft: 2, isRFA: true, ppg: 6.5, rpg: 5.0, apg: 1.5},
+            {name: "Jonas Valanciunas", team: "Washington Wizards", position: "C", age: 34, salary: 10500000, yearsLeft: 1, isRFA: false, ppg: 11.0, rpg: 8.5, apg: 1.8},
+            {name: "Corey Kispert", team: "Washington Wizards", position: "SF", age: 27, salary: 4500000, yearsLeft: 1, isRFA: false, ppg: 10.0, rpg: 3.0, apg: 1.8},
+            {name: "Johnny Davis", team: "Washington Wizards", position: "SG", age: 24, salary: 5200000, yearsLeft: 1, isRFA: true, ppg: 7.0, rpg: 3.0, apg: 2.5},
+            {name: "Justin Champagnie", team: "Washington Wizards", position: "PF", age: 25, salary: 2500000, yearsLeft: 1, isRFA: false, ppg: 6.0, rpg: 4.5, apg: 1.0},
+        ];
+
+        // Constants
+        const SALARY_CAP = 166000000;
+        const SALARY_FLOOR = Math.floor(SALARY_CAP * 0.90);
+        const LUXURY_TAX = 200000000;
+        const FIRST_APRON = 209000000;
+        const SECOND_APRON = 222000000;
+        const MIN_EXPANSION_PICKS = 14;
+        const TOTAL_ROSTER = 15;
+
+        let selectedTeam = null;
+        let draftPick = 0;
+        let draftedRookie = null;
+        let roster = [];
+        let draftedFromTeams = new Set();
+
+        function formatMoney(n) { return '$' + n.toLocaleString(); }
+
+        function selectTeam(team) {
+            selectedTeam = team;
+            draftPick = Math.floor(Math.random() * 7) + 2; // Random pick 2-8 (pick 1 goes to other team)
+            document.getElementById('teamSelection').style.display = 'none';
+            document.getElementById('nbaDraft').classList.add('active');
+            document.getElementById('draftPickNum').textContent = draftPick;
+            renderProspects();
+        }
+
+        function renderProspects() {
+            const grid = document.getElementById('prospectsGrid');
+            grid.innerHTML = DRAFT_PROSPECTS.map((p, i) => {
+                const available = p.rank >= draftPick;
+                return `
+                    <div class="prospect-card ${available ? '' : 'unavailable'}">
+                        <span class="prospect-rank">#${p.rank} Overall</span>
+                        <h3>${p.name}</h3>
+                        <div class="school">${p.pos} • ${p.school}</div>
+                        <div class="details">
+                            Proj PPG: ${p.ppg} | Potential: ${p.potential}<br>
+                            Rookie Contract: ${formatMoney(p.salary)}/yr × 4 years
+                        </div>
+                        ${available ? `<button class="select-prospect-btn" onclick="selectProspect(${i})">Select ${p.name}</button>` : '<div style="color:#666;text-align:center;margin-top:10px;">Picked before your selection</div>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectProspect(idx) {
+            const p = DRAFT_PROSPECTS[idx];
+            draftedRookie = {
+                name: p.name,
+                team: "2026 Draft",
+                position: p.pos,
+                age: 20,
+                salary: p.salary,
+                yearsLeft: 4,
+                isRFA: true,
+                ppg: p.ppg,
+                rpg: 3.0,
+                apg: 2.0,
+                isRookie: true
+            };
+            roster.push(draftedRookie);
+            document.getElementById('nbaDraft').classList.remove('active');
+            document.getElementById('draftBoard').classList.add('active');
+            if (selectedTeam === 'seattle') {
+                document.getElementById('selectedTeamLogo').textContent = '🌲';
+                document.getElementById('selectedTeamName').textContent = 'Seattle Supersonics';
+            } else {
+                document.getElementById('selectedTeamLogo').textContent = '🎰';
+                document.getElementById('selectedTeamName').textContent = 'Las Vegas Kings';
+            }
+            populateTeamFilter();
+            renderPlayers();
+            renderRoster();
+            updateCapInfo();
+        }
+
+        function populateTeamFilter() {
+            const teams = [...new Set(PLAYERS.map(p => p.team))].sort();
+            const select = document.getElementById('teamFilter');
+            teams.forEach(team => {
+                const opt = document.createElement('option');
+                opt.value = team;
+                opt.textContent = team;
+                select.appendChild(opt);
+            });
+        }
+
+        function getFilteredPlayers() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const pos = document.getElementById('posFilter').value;
+            const team = document.getElementById('teamFilter').value;
+            const sort = document.getElementById('sortBy').value;
+            let filtered = PLAYERS.filter(p => {
+                if (search && !p.name.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
+                if (pos && p.position !== pos) return false;
+                if (team && p.team !== team) return false;
+                return true;
+            });
+            switch(sort) {
+                case 'salary-desc': filtered.sort((a,b) => b.salary - a.salary); break;
+                case 'ppg-desc': filtered.sort((a,b) => b.ppg - a.ppg); break;
+                case 'age-asc': filtered.sort((a,b) => a.age - b.age); break;
+            }
+            return filtered;
+        }
+
+        function getTotalSalary() { return roster.reduce((s,p) => s + p.salary, 0); }
+
+        function canDraft(player) {
+            if (roster.find(p => p.name === player.name)) return false;
+            if (draftedFromTeams.has(player.team)) return false;
+            if (roster.length >= TOTAL_ROSTER) return false;
+            return true;
+        }
+
+        function draftPlayer(player) {
+            if (!canDraft(player)) return;
+            roster.push(player);
+            draftedFromTeams.add(player.team);
+            renderPlayers();
+            renderRoster();
+            updateCapInfo();
+        }
+
+        function removePlayer(idx) {
+            const p = roster[idx];
+            if (p.isRookie) return; // Can't remove your draft pick
+            draftedFromTeams.delete(p.team);
+            roster.splice(idx, 1);
+            renderPlayers();
+            renderRoster();
+            updateCapInfo();
+        }
+
+        function renderPlayers() {
+            const grid = document.getElementById('playersGrid');
+            const players = getFilteredPlayers().filter(p => !roster.find(r => r.name === p.name));
+            grid.innerHTML = players.map(p => {
+                const teamDrafted = draftedFromTeams.has(p.team);
+                const canPick = canDraft(p);
+                let cls = 'player-card';
+                if (teamDrafted) cls += ' team-drafted';
+                return `
+                    <div class="${cls}">
+                        <div class="player-pos pos-${p.position}">${p.position}</div>
+                        <div class="player-info">
+                            <h4>${p.name}${p.isRFA ? ' (RFA)' : ''}</h4>
+                            <p>${p.team} • ${p.age}yo</p>
+                        </div>
+                        <div class="player-stats">${p.ppg}/${p.rpg}/${p.apg}</div>
+                        <div class="player-contract"><span class="years">${p.yearsLeft}yr</span></div>
+                        <div class="player-salary ${p.salary > 10000000 ? 'high' : ''}">${formatMoney(p.salary)}</div>
+                        <button class="draft-btn" onclick='draftPlayer(${JSON.stringify(p).replace(/'/g, "\\'")})' ${!canPick ? 'disabled' : ''}>${teamDrafted ? '—' : 'Draft'}</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRoster() {
+            const list = document.getElementById('rosterList');
+            if (roster.length === 0) {
+                list.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">Draft players</p>';
+                return;
+            }
+            list.innerHTML = roster.map((p,i) => `
+                <div class="roster-player ${p.isRookie ? 'rookie' : ''}">
+                    <span class="pos pos-${p.position}">${p.position}</span>
+                    <span class="name">${p.name}${p.isRookie ? ' 🌟' : ''}</span>
+                    <span class="years">${p.yearsLeft}yr</span>
+                    <span class="salary">${formatMoney(p.salary)}</span>
+                    ${p.isRookie ? '' : `<button class="remove-btn" onclick="removePlayer(${i})">×</button>`}
+                </div>
+            `).join('');
+
+            const totalCommitted = roster.reduce((s,p) => s + p.salary * p.yearsLeft, 0);
+            const avgYears = (roster.reduce((s,p) => s + p.yearsLeft, 0) / roster.length).toFixed(1);
+            const expansionPicks = roster.filter(p => !p.isRookie).length;
+
+            document.getElementById('summaryPlayers').textContent = `${roster.length} / ${TOTAL_ROSTER}`;
+            document.getElementById('summaryAvgYears').textContent = `${avgYears} years`;
+            document.getElementById('summaryTotal').textContent = formatMoney(getTotalSalary());
+            document.getElementById('summaryCommitted').textContent = formatMoney(totalCommitted);
+
+            const btn = document.getElementById('finalizeBtn');
+            const meetsFloor = getTotalSalary() >= SALARY_FLOOR;
+            if (roster.length === TOTAL_ROSTER && meetsFloor) {
+                btn.disabled = false;
+                btn.textContent = 'Finalize Roster';
+                btn.style.background = 'linear-gradient(90deg, #00ff88, #00cc6a)';
+            } else if (roster.length === TOTAL_ROSTER && !meetsFloor) {
+                btn.disabled = true;
+                btn.textContent = `Need ${formatMoney(SALARY_FLOOR - getTotalSalary())} for floor`;
+                btn.style.background = '#444';
+            } else {
+                btn.disabled = true;
+                btn.textContent = `Draft ${MIN_EXPANSION_PICKS - expansionPicks} More Players`;
+                btn.style.background = '#444';
+            }
+
+            const badge = document.getElementById('rosterCount');
+            badge.textContent = `Roster: ${roster.length} / ${TOTAL_ROSTER}`;
+            badge.className = roster.length === TOTAL_ROSTER ? 'roster-count complete' : 'roster-count';
+        }
+
+        function updateCapInfo() {
+            const used = getTotalSalary();
+            const pct = (used / SALARY_CAP) * 100;
+            const meetsFloor = used >= SALARY_FLOOR;
+            document.getElementById('capUsed').textContent = formatMoney(used);
+            const status = document.getElementById('floorStatus');
+            if (meetsFloor) {
+                status.style.color = '#00ff88';
+                status.textContent = `Floor met! +${formatMoney(used - SALARY_FLOOR)}`;
+            } else {
+                status.style.color = '#ff6b6b';
+                status.textContent = `Need ${formatMoney(SALARY_FLOOR - used)}`;
+            }
+            const bar = document.getElementById('capBar');
+            bar.style.width = `${Math.min(pct, 120)}%`;
+            bar.className = meetsFloor ? 'cap-fill floor-met' : 'cap-fill';
+
+            const alert = document.getElementById('taxAlert');
+            if (used >= SECOND_APRON) {
+                alert.style.display = 'block';
+                alert.className = 'tax-alert severe';
+                alert.innerHTML = '⚠️ SECOND APRON - Severe trade/signing restrictions';
+            } else if (used >= FIRST_APRON) {
+                alert.style.display = 'block';
+                alert.className = 'tax-alert danger';
+                alert.innerHTML = '⚠️ FIRST APRON - Limited MLE, sign-and-trade restrictions';
+            } else if (used >= LUXURY_TAX) {
+                alert.style.display = 'block';
+                alert.className = 'tax-alert warning';
+                alert.innerHTML = `💰 LUXURY TAX - ${formatMoney(used - LUXURY_TAX)} over tax line`;
+            } else {
+                alert.style.display = 'none';
+            }
+        }
+
+        function buildRotation() {
+            // Position compatibility for flexible lineup building
+            const positionOrder = ['PG', 'SG', 'SF', 'PF', 'C'];
+            const canPlay = {
+                'PG': ['PG', 'SG'],
+                'SG': ['SG', 'PG', 'SF'],
+                'SF': ['SF', 'SG', 'PF'],
+                'PF': ['PF', 'SF', 'C'],
+                'C': ['C', 'PF']
+            };
+
+            // Sort all players by PPG (best first)
+            const sorted = [...roster].sort((a, b) => b.ppg - a.ppg);
+            const assigned = new Set();
+            const starters = [];
+
+            // First pass: assign best player at each position
+            for (const pos of positionOrder) {
+                const player = sorted.find(p => !assigned.has(p.name) && canPlay[pos].includes(p.position));
+                if (player) {
+                    starters.push({ ...player, role: pos });
+                    assigned.add(player.name);
+                }
+            }
+
+            // Fill any remaining starter spots with best available
+            while (starters.length < 5) {
+                const player = sorted.find(p => !assigned.has(p.name));
+                if (player) {
+                    starters.push({ ...player, role: player.position });
+                    assigned.add(player.name);
+                }
+            }
+
+            // Rotation: next 5 best
+            const rotation = [];
+            for (const p of sorted) {
+                if (!assigned.has(p.name) && rotation.length < 5) {
+                    rotation.push(p);
+                    assigned.add(p.name);
+                }
+            }
+
+            // Bench: remaining players
+            const bench = sorted.filter(p => !assigned.has(p.name));
+
+            return { starters, rotation, bench };
+        }
+
+        function finalizeDraft() {
+            if (roster.length !== TOTAL_ROSTER) return;
+            const teamName = selectedTeam === 'seattle' ? 'Seattle Supersonics' : 'Las Vegas Kings';
+            document.getElementById('modalTeamName').textContent = `Your ${teamName} roster is complete!`;
+
+            const { starters, rotation, bench } = buildRotation();
+
+            const renderPlayer = (p) => `
+                <div class="rotation-player">
+                    <span class="pos-badge pos-${p.position}">${p.position}</span>
+                    <span class="name">${p.name}${p.isRookie ? ' <span class="rookie-star">★</span>' : ''}</span>
+                    <span class="stats">${p.ppg}/${p.rpg}/${p.apg}</span>
+                    <span class="salary">${formatMoney(p.salary)}</span>
+                </div>
+            `;
+
+            const startersPPG = starters.reduce((s,p) => s + p.ppg, 0).toFixed(1);
+            const rotationPPG = rotation.reduce((s,p) => s + p.ppg, 0).toFixed(1);
+            const benchPPG = bench.reduce((s,p) => s + p.ppg, 0).toFixed(1);
+
+            document.getElementById('rotationDisplay').innerHTML = `
+                <div class="rotation-section starters">
+                    <h3>Starting Five (${startersPPG} PPG)</h3>
+                    ${starters.map(renderPlayer).join('')}
+                </div>
+                <div class="rotation-section rotation">
+                    <h3>Rotation (${rotationPPG} PPG)</h3>
+                    ${rotation.map(renderPlayer).join('')}
+                </div>
+                <div class="rotation-section bench">
+                    <h3>Bench (${benchPPG} PPG)</h3>
+                    ${bench.map(renderPlayer).join('')}
+                </div>
+            `;
+
+            const total = getTotalSalary();
+            const committed = roster.reduce((s,p) => s + p.salary * p.yearsLeft, 0);
+            let taxStatus = '✓ Under tax', taxColor = '#00ff88';
+            if (total >= SECOND_APRON) { taxStatus = '⚠️ Second Apron'; taxColor = '#f44336'; }
+            else if (total >= FIRST_APRON) { taxStatus = '⚠️ First Apron'; taxColor = '#ff5722'; }
+            else if (total >= LUXURY_TAX) { taxStatus = '💰 Luxury Tax'; taxColor = '#ffc107'; }
+
+            document.getElementById('modalSummary').innerHTML = `
+                <p style="margin-top:15px;text-align:center;">
+                    <strong>Year 1:</strong> ${formatMoney(total)} |
+                    <strong>Tax:</strong> <span style="color:${taxColor}">${taxStatus}</span><br>
+                    <strong>Total Committed:</strong> ${formatMoney(committed)}
+                </p>
+            `;
+            document.getElementById('completionModal').classList.add('active');
+        }
+
+        function restartDraft() {
+            roster = [];
+            draftedFromTeams.clear();
+            selectedTeam = null;
+            draftedRookie = null;
+            document.getElementById('completionModal').classList.remove('active');
+            document.getElementById('draftBoard').classList.remove('active');
+            document.getElementById('nbaDraft').classList.remove('active');
+            document.getElementById('teamSelection').style.display = 'flex';
+            document.getElementById('teamFilter').innerHTML = '<option value="">All Teams</option>';
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderPlayers);
+        document.getElementById('posFilter').addEventListener('change', renderPlayers);
+        document.getElementById('teamFilter').addEventListener('change', renderPlayers);
+        document.getElementById('sortBy').addEventListener('change', renderPlayers);
+    </script>
+</body>
+</html>
