@@ -363,6 +363,75 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+        /* Mobile Styles */
+        @media (max-width: 600px) {
+            header { padding: 20px 15px; }
+            header h1 { font-size: 1.5rem; }
+            header p { font-size: 0.9rem; }
+
+            .team-selection { flex-direction: column; align-items: center; gap: 20px; padding: 30px 15px; }
+            .team-card { width: 100%; max-width: 280px; padding: 25px; }
+            .team-logo { font-size: 50px; margin-bottom: 10px; }
+            .team-card h2 { font-size: 1.4rem; }
+
+            .nba-draft { padding: 20px 15px; }
+            .draft-pick-badge { font-size: 1.1rem; padding: 12px 20px; }
+            .prospects-grid { grid-template-columns: 1fr; max-height: none; }
+            .prospect-card { padding: 15px; }
+
+            .container { padding: 10px; }
+            .draft-header { padding: 15px; flex-direction: column; align-items: stretch; text-align: center; }
+            .team-info { justify-content: center; }
+            .team-info h2 { font-size: 1.2rem; }
+            .cap-info { text-align: center; font-size: 0.85rem; }
+            .cap-bar { width: 100%; max-width: 280px; margin: 8px auto 0; }
+            .roster-count { text-align: center; }
+
+            .available-players, .your-roster { padding: 15px; }
+            .filter-bar { gap: 8px; }
+            .filter-bar input { min-width: 100%; }
+            .filter-bar select { flex: 1; min-width: 45%; font-size: 0.9rem; padding: 10px; }
+
+            .players-grid { max-height: 450px; }
+            .player-card {
+                grid-template-columns: 40px 1fr auto;
+                grid-template-rows: auto auto;
+                gap: 6px 10px;
+                padding: 10px;
+            }
+            .player-pos { grid-row: span 2; align-self: center; }
+            .player-info { grid-column: 2; }
+            .player-info h4 { font-size: 0.9rem; }
+            .player-stats { display: none; }
+            .player-contract { display: none; }
+            .player-salary { grid-column: 3; grid-row: 1; font-size: 0.8rem; }
+            .draft-btn { grid-column: 2 / 4; grid-row: 2; padding: 8px; }
+
+            .roster-player { font-size: 0.8rem; padding: 8px; flex-wrap: wrap; gap: 5px; }
+            .roster-player .name { min-width: 100px; }
+            .roster-player .years { margin-right: 5px; }
+
+            .rules-panel { padding: 15px; font-size: 0.85rem; }
+            .rules-panel h3 { font-size: 1rem; }
+            .rules-panel li { font-size: 0.8rem; }
+
+            .modal { padding: 15px 10px; }
+            .modal-content { padding: 20px 15px; border-radius: 15px; }
+            .modal-content h2 { font-size: 1.4rem; }
+            .rotation-section { padding: 12px; margin: 10px 0; }
+            .rotation-section h3 { font-size: 0.9rem; }
+            .rotation-player {
+                grid-template-columns: 35px 1fr 65px;
+                gap: 8px;
+                padding: 6px 3px;
+            }
+            .rotation-player .pos-badge { font-size: 0.7rem; padding: 3px 5px; }
+            .rotation-player .name { font-size: 0.85rem; }
+            .rotation-player .stats { display: none; }
+            .rotation-player .salary { font-size: 0.8rem; }
+            .restart-btn { padding: 12px; font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
